@@ -8,10 +8,7 @@ public class BlasterBullet : MonoBehaviour {
 
     private void OnTriggerEnter(Collider other)
     {
-        if (blasterRifle != null)
-        {
-            blasterRifle.BulletHit(transform.position - transform.forward, other.GetComponent<TwinStickController>());
-        }
+        
         if (other.GetComponent<Lightsaber>() != null)
         {
             
@@ -20,8 +17,13 @@ public class BlasterBullet : MonoBehaviour {
         }
         else
         {
+            
             if (!other.isTrigger)
             {
+                if (blasterRifle != null)
+                {
+                    blasterRifle.BulletHit(transform.position - transform.forward, other.GetComponentInParent<TwinStickController>(), other, transform.forward);
+                }
                 Destroy(gameObject);
             }
         }

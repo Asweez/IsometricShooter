@@ -21,7 +21,7 @@ public class BlasterRifle : MonoBehaviour {
 
     // Update is called once per frame
     void Update () {
-        if(Input.GetButton("Fire1") && Time.time - fireTime >= fireRate){
+        if(Input.GetButton("Fire1") && Time.time - fireTime >= fireRate && GetComponentInParent<TwinStickController>().Health > 0){
             GameObject newBullet = Instantiate(blasterBullet, muzzle.position, Quaternion.identity);
             Vector3 velocity = muzzle.forward;
             velocity = Quaternion.AngleAxis(Random.Range(-horizontalSpread, horizontalSpread), Vector3.up) * velocity;
@@ -33,12 +33,12 @@ public class BlasterRifle : MonoBehaviour {
         }
 	}
 
-    public void BulletHit(Vector3 point, TwinStickController player){
+    public void BulletHit(Vector3 point, TwinStickController player, Collider c, Vector3 dir){
         Destroy(Instantiate(impactPS, point, Quaternion.identity), 1.5f);
         if (player)
         {
             Destroy(Instantiate(playerImpactPS, point, Quaternion.identity), 1.5f);
-            player.Health -= bulletDamage;
+            player.TakeDamage(bulletDamage, c.GetComponent<Rigidbody>(), dir.normalized);
         }
     }
 }

@@ -55,7 +55,6 @@ MonoBehaviour:
   mask:
     overrideState: 0
     value: {fileID: 0}
-    defaultState: 1
   opacity:
     overrideState: 0
     value: 1
@@ -83,9 +82,6 @@ MonoBehaviour:
   softKnee:
     overrideState: 0
     value: 0.5
-  clamp:
-    overrideState: 0
-    value: 65472
   diffusion:
     overrideState: 0
     value: 7
@@ -101,7 +97,6 @@ MonoBehaviour:
   dirtTexture:
     overrideState: 0
     value: {fileID: 0}
-    defaultState: 1
   dirtIntensity:
     overrideState: 0
     value: 0
@@ -143,7 +138,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b94fcd11afffcb142908bfcb1e261fba, type: 3}
   m_Name: MotionBlur
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   enabled:
     overrideState: 1
     value: 1

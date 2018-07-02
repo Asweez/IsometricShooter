@@ -21,6 +21,8 @@ public class TwinStickController : MonoBehaviour {
     private float _health;
     public Transform heldItemPos;
     public LightsaberBlockHandler lightsaberBlockHandler;
+    private List<Rigidbody> ragdollRBs;
+    private bool isRagdoll = false;
 
 	// Use this for initialization
 	void Awake () {
@@ -28,10 +30,34 @@ public class TwinStickController : MonoBehaviour {
         animator = GetComponent<Animator>();
         rigidbody = GetComponent<Rigidbody>();
         lightsaberBlockHandler = GetComponentInChildren<LightsaberBlockHandler>();
+        ragdollRBs = new List<Rigidbody>(GetComponentsInChildren<Rigidbody>());
+        ragdollRBs.Remove(rigidbody);
+        hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+        Ragdoll(false);
 	}
+
+    void Ragdoll(bool ragdoll)
+    {
+        isRagdoll = ragdoll;
+        animator.enabled = !ragdoll;
+        if (heldItem != null)
+        {
+            heldItem.transform.SetParent(ragdoll ? animator.GetBoneTransform(HumanBodyBones.RightHand) : heldItemPos);
+            heldItem.transform.localPosition = Vector3.zero;
+            heldItem.transform.localRotation = Quaternion.identity;
+            heldItem.transform.localScale = Vector3.one;
+        }
+        foreach(Rigidbody r in ragdollRBs)
+        {
+            r.isKinematic = !ragdoll;
+        }
+    }
+
+    Transform hips;
 	
 	// Update is called once per frame
 	void Update () {
+        
         if(Input.GetButtonDown("Pickup Item") && itemToPickup != null){
             if (heldItem != null)
             {
@@ -55,6 +81,12 @@ public class TwinStickController : MonoBehaviour {
 
     private void FixedUpdate()
     {
+        if (isRagdoll)
+        {
+            transform.position = hips.position;
+            hips.localPosition = Vector3.zero;
+            return;
+        }
         float speed = 0f;
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
@@ -83,6 +115,7 @@ public class TwinStickController : MonoBehaviour {
     {
         if(other.GetComponent<ItemPickup>() != null){
             itemToPickup = other.gameObject;
+            other.GetComponent<ItemPickup>().UpdateColor(Color.yellow);
         }
     }
 
@@ -90,13 +123,38 @@ public class TwinStickController : MonoBehaviour {
     {
         if(other.GetComponent<ItemPickup>() != null){
             itemToPickup = null;
+            other.GetComponent<ItemPickup>().ResetColor();
         }
     }
 
     void HealthChanged(){
         if(_health <= 0){
-            Destroy(gameObject);
+            Ragdoll(true);
+            if(heldItem.GetComponent<Lightsaber>() != null)
+            {
+                StartCoroutine(heldItem.GetComponent<Lightsaber>().Extend(false));
+            }
+            StartCoroutine(Die());
         }
+    }
+
+    IEnumerator Die()
+    {
+        yield return new WaitForSeconds(5f);
+        for (float f = 0f; f <= 1; f += 0.01f)
+        {
+            GetComponent<SkinnedMeshRenderer>().material.SetFloat("Vector1_5F9D24A2", f);
+            yield return new WaitForSeconds(0.01f);
+        }
+        Destroy(gameObject);
+    }
+
+    public float deathForce = 100f;
+
+    public void TakeDamage(float damage, Rigidbody bone, Vector3 dir)
+    {
+        Health -= damage;
+        bone.AddForce(dir * deathForce, ForceMode.Impulse);
     }
 
     private void OnAnimatorIK(int layerIndex)
@@ -105,7 +163,7 @@ public class TwinStickController : MonoBehaviour {
         animator.SetIKPositionWeight(AvatarIKGoal.RightFoot, 0f);
         animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0f);
         animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 0f);
-        if(heldItem != null){
+        if(heldItem != null && !isRagdoll){
             Transform leftHandPos = heldItem.transform.Find("LeftHandPos");
             Transform rightHandPos = heldItem.transform.Find("RightHandPos");
             if(leftHandPos){

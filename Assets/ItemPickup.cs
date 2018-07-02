@@ -8,11 +8,13 @@ public class ItemPickup : MonoBehaviour {
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     public Material hologramMaterial;
+    public static Color defaultColor;
 
 	// Use this for initialization
 	void Awake () {
         meshFilter = GetComponentInChildren<MeshFilter>();
         meshRenderer = GetComponentInChildren<MeshRenderer>();
+        defaultColor = hologramMaterial.GetColor("Color_B11E0E63");
 	}
 
     private void Start()
@@ -36,5 +38,18 @@ public class ItemPickup : MonoBehaviour {
             materials[i] = hologramMaterial;
         }
         meshRenderer.sharedMaterials = materials;
+    }
+
+    public void UpdateColor(Color c)
+    {
+        for(int i = 0; i < meshRenderer.materials.Length; i++)
+        {
+            meshRenderer.materials[i].SetColor("Color_B11E0E63", c);
+        }
+    }
+
+    public void ResetColor()
+    {
+        UpdateColor(defaultColor);
     }
 }

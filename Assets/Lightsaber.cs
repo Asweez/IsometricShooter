@@ -34,6 +34,7 @@ public class Lightsaber : MonoBehaviour
         GetComponent<Light>().color = lightsaberMat.GetColor("Color_D009460D").gamma;
         prevLocalRot = transform.localRotation;
         CreateMesh();
+        StartCoroutine(Extend(true));
     }
 
     private void OnEnable()
@@ -50,9 +51,11 @@ public class Lightsaber : MonoBehaviour
     float angle = 45f;
     Transform min, max, center;
     Transform lbh;
+    Vector3 dir;
     // Update is called once per frame
     void Update()
     {
+        if (GetComponentInParent<TwinStickController>().Health <= 0) return;
         blocking = Input.GetButton("Fire2");
         if(Input.GetButtonDown("Fire2")){
             GetComponent<BoxCollider>().size = new Vector3(GetComponent<BoxCollider>().size.x * blockingColliderIncreaseMultiplier, GetComponent<BoxCollider>().size.y, GetComponent<BoxCollider>().size.z * blockingColliderIncreaseMultiplier);
@@ -88,7 +91,9 @@ public class Lightsaber : MonoBehaviour
             }
             if (lerp <= 2)
             {
-                transform.position = Vector3.Lerp(Vector3.Lerp(lbh.TransformPoint(start), center.position, lerp), Vector3.Lerp(center.position, lbh.TransformPoint(end), lerp), lerp);
+                Vector3 prevPos = transform.position;
+                transform.position = Vector3.Slerp(Vector3.Lerp(lbh.TransformPoint(start), center.position, lerp), Vector3.Lerp(center.position, lbh.TransformPoint(end), lerp), lerp);
+                dir = transform.position - prevPos;
                 lerp += Time.deltaTime * swingSpeed;
                 transform.LookAt(transform.parent);
                 transform.Rotate(new Vector3(90f, 0, 180f));
@@ -102,6 +107,25 @@ public class Lightsaber : MonoBehaviour
         }
     }
 
+    bool shouldDoDamage = true;
+
+    void OnTriggerEnter(Collider other)
+    {
+        if(shouldDoDamage && !other.isTrigger && other.GetComponentInParent<TwinStickController>() != null && other.GetComponentInParent<TwinStickController>() != GetComponentInParent<TwinStickController>())
+        {
+            other.GetComponentInParent<TwinStickController>().TakeDamage(50f, other.GetComponent<Rigidbody>(), dir);
+            shouldDoDamage = false;
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (!other.isTrigger && other.GetComponentInParent<TwinStickController>() != null && other.GetComponentInParent<TwinStickController>() != GetComponentInParent<TwinStickController>())
+        {
+            shouldDoDamage = true;
+        }
+    }
+
     private void LateUpdate()
     {
         CreateMesh();
@@ -112,6 +136,16 @@ public class Lightsaber : MonoBehaviour
         if (meshFilter != null)
         {
             Destroy(meshFilter.gameObject);
+        }
+    }
+
+    public IEnumerator Extend(bool extend)
+    {
+        GetComponent<Light>().enabled = extend;
+        for(float i = extend ? 0 : 1; extend ? i <= 1 : i >= 0; i += extend ? 0.02f : -0.02f)
+        {
+            meshFilter.GetComponent<MeshRenderer>().material.SetFloat("Vector1_67099CF8", i);
+            yield return new WaitForSeconds(0.01f);
         }
     }
 
