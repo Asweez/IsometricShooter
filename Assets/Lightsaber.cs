@@ -5,7 +5,10 @@ using UnityEngine;
 public class Lightsaber : MonoBehaviour
 {
 
-    public int length = 1;
+    public float length = 1;
+    public float angleThreshold = 20f;
+    public bool blocking = false;
+    public float blockingColliderIncreaseMultiplier = 2f;
     public Material lightsaberMat;
 
     private List<Vector3> vertices;
@@ -14,87 +17,138 @@ public class Lightsaber : MonoBehaviour
     public MeshFilter meshFilter;
     public Transform bottomLeft, bottomRight, topLeft, topRight;
     public float swingSpeed = 1f;
-    public float swingExtents = 1f;
 
     private void Awake()
     {
         vertices = new List<Vector3>();
         GameObject blade = new GameObject("LightsaberBlade");
+        blade.transform.SetParent(transform);
+        blade.transform.localPosition = Vector3.zero;
+        blade.transform.localScale = Vector3.one;
+        blade.transform.localRotation = Quaternion.identity;
         blade.AddComponent<MeshFilter>();
         meshFilter = blade.GetComponent<MeshFilter>();
         blade.AddComponent<MeshRenderer>();
         blade.GetComponent<MeshRenderer>().material = lightsaberMat;
+        blade.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         GetComponent<Light>().color = lightsaberMat.GetColor("Color_D009460D").gamma;
+        prevLocalRot = transform.localRotation;
+        CreateMesh();
     }
 
+    private void OnEnable()
+    {
+        defaultLocalPos = transform.localPosition;
+        defaultLocalRot = transform.localRotation;
+    }
+
+    Vector3 defaultLocalPos;
+    Quaternion defaultLocalRot;
+
     Vector3 start, end;
-    int i = 0;
     float lerp = 0f;
+    float angle = 45f;
     Transform min, max, center;
     Transform lbh;
-
     // Update is called once per frame
     void Update()
     {
-        if(min == null){
-            lbh = GetComponentInParent<TwinStickController>().lightsaberBlockHandler.transform;
-            min = lbh.Find("Min");
-            max = lbh.Find("Max");
-            center = lbh.Find("Center");
+        blocking = Input.GetButton("Fire2");
+        if(Input.GetButtonDown("Fire2")){
+            GetComponent<BoxCollider>().size = new Vector3(GetComponent<BoxCollider>().size.x * blockingColliderIncreaseMultiplier, GetComponent<BoxCollider>().size.y, GetComponent<BoxCollider>().size.z * blockingColliderIncreaseMultiplier);
         }
-        CreateMesh();
-        if(Input.GetButtonDown("Fire1")){
-            lerp = 0;
-            float rand = Random.value;
-            start = lbh.InverseTransformPoint(transform.position);
-            //start = new Vector3(Random.value <= 0.5f ? min.localPosition.x : max.localPosition.x, Random.value <= 0.5f ? min.localPosition.y : max.localPosition.y, min.localPosition.z);
-            do
+        if (Input.GetButtonUp("Fire2"))
+        {
+            GetComponent<BoxCollider>().size = new Vector3(GetComponent<BoxCollider>().size.x / blockingColliderIncreaseMultiplier, GetComponent<BoxCollider>().size.y, GetComponent<BoxCollider>().size.z / blockingColliderIncreaseMultiplier);
+        }
+        if (blocking)
+        {
+            transform.localPosition = Vector3.Lerp(transform.localPosition, defaultLocalPos, Time.deltaTime * 4);
+            transform.localRotation = Quaternion.Lerp(transform.localRotation, defaultLocalRot, Time.deltaTime * 4);
+        }
+        else
+        {
+            if (min == null)
             {
-                end = new Vector3(Random.value <= 0.5f ? min.localPosition.x : max.localPosition.x, Random.value <= 0.5f ? min.localPosition.y : max.localPosition.y, min.localPosition.z);
-            } while (end.Equals(start));
-                //if(i == 1){
-            //    i = 2;
-            //    start = min.localPosition;
-            //    end = max.localPosition;
-            //}else{
-            //    i = 1;
-            //    start = max.localPosition;
-            //    end = min.localPosition;
-            //}
+                lbh = GetComponentInParent<TwinStickController>().lightsaberBlockHandler.transform;
+                min = lbh.Find("Min");
+                max = lbh.Find("Max");
+                center = lbh.Find("Center");
+            }
+            if (Input.GetButtonDown("Fire1") && lerp >= 0.8f)
+            {
+                lerp = 0;
+                float rand = Random.value;
+                start = lbh.InverseTransformPoint(transform.position);
+                do
+                {
+                    end = new Vector3(Mathf.Lerp(min.localPosition.x, max.localPosition.x, (Mathf.Cos(angle * Mathf.Deg2Rad) / 2f) + 0.5f), Mathf.Lerp(min.localPosition.y, max.localPosition.y, (Mathf.Sin(angle * Mathf.Deg2Rad) / 2f) + 0.5f), min.localPosition.z);
+                } while (end.Equals(start));
+                angle = (angle + 150) % 360;
+            }
+            if (lerp <= 2)
+            {
+                transform.position = Vector3.Lerp(Vector3.Lerp(lbh.TransformPoint(start), center.position, lerp), Vector3.Lerp(center.position, lbh.TransformPoint(end), lerp), lerp);
+                lerp += Time.deltaTime * swingSpeed;
+                transform.LookAt(transform.parent);
+                transform.Rotate(new Vector3(90f, 0, 180f));
+            }
+            else
+            {
+                transform.localPosition = Vector3.Lerp(transform.localPosition, defaultLocalPos, Time.deltaTime * 4);
+                transform.localRotation = Quaternion.Lerp(transform.localRotation, defaultLocalRot, Time.deltaTime * 4);
+                //transform.Rotate(transform.parent.forward, Time.deltaTime * rotSpeed);
+            }
         }
-        transform.position = Vector3.Lerp(Vector3.Lerp(lbh.TransformPoint(start), center.position, lerp), Vector3.Lerp(center.position, lbh.TransformPoint(end), lerp), lerp);
-        lerp += Time.deltaTime * swingSpeed;
-        transform.LookAt(transform.parent);
-        transform.Rotate(new Vector3(90f, 0, 180f));
+    }
+
+    private void LateUpdate()
+    {
+        CreateMesh();
     }
 
     private void OnDestroy()
     {
-        Destroy(meshFilter.gameObject);
+        if (meshFilter != null)
+        {
+            Destroy(meshFilter.gameObject);
+        }
     }
 
+    Quaternion prevLocalRot;
 
     void CreateMesh(){
-        while (vertices.Count > 8 + (length * 4))
+        Quaternion delta = Quaternion.Inverse(transform.localRotation) * prevLocalRot;
+        float angle;
+        Vector3 axis;
+        delta.ToAngleAxis(out angle, out axis);
+        Vector3 modifier = Vector3.forward * bottomRight.localPosition.z * -2;
+        vertices.Clear();
+        vertices.Add(bottomRight.localPosition + modifier);
+        vertices.Add(topRight.localPosition + modifier);
+        vertices.Add(topLeft.localPosition + modifier);
+        vertices.Add(bottomLeft.localPosition + modifier);
+        vertices.Add(bottomRight.localPosition);
+        vertices.Add(topRight.localPosition);
+        vertices.Add(topLeft.localPosition);
+        vertices.Add(bottomLeft.localPosition);
+
+        for (float f = 0.25f; f <= length; f += 0.25f)
         {
-            vertices.RemoveAt(0);
+            delta = Quaternion.AngleAxis(angle * f, axis);
+            if (angle * f > angleThreshold) break;
+            vertices.Add(delta * bottomRight.localPosition);
+            vertices.Add(delta * topRight.localPosition);
+            vertices.Add(delta * topLeft.localPosition);
+            vertices.Add(delta * bottomLeft.localPosition);
         }
-        Vector3 modifier = transform.forward * 0.2f;
-        vertices.Add(bottomRight.position + modifier);
-        vertices.Add(topRight.position + modifier);
-        vertices.Add(topLeft.position + modifier);
-        vertices.Add(bottomLeft.position + modifier);
-        vertices.Add(bottomRight.position);
-        vertices.Add(topRight.position);
-        vertices.Add(topLeft.position);
-        vertices.Add(bottomLeft.position);
+
+        //for (int i = 1; i < vertices.Count; i++){
+        //    Debug.DrawLine(transform.TransformPoint(vertices[i]), transform.TransformPoint(vertices[i - 1]), Color.black);
+        //}
+
         Mesh mesh = new Mesh();
-        List<Vector3> newVerts = new List<Vector3>();
-        for (int i = 0; i < vertices.Count; i++)
-        {
-            newVerts.Add(meshFilter.transform.InverseTransformVector(vertices[i]));
-        }
-        mesh.SetVertices(newVerts);
+        mesh.SetVertices(vertices);
         int[] triangles = new int[(vertices.Count - 2) * 6];
         Vector2[] uvs = new Vector2[vertices.Count];
         uvs[0] = (Vector2.right);
@@ -132,6 +186,26 @@ public class Lightsaber : MonoBehaviour
         mesh.RecalculateBounds();
         mesh.RecalculateNormals();
         meshFilter.mesh = mesh;
+        prevLocalRot = transform.localRotation;
+    }
+
+    void UpdateMesh(){
+        Quaternion delta = transform.localRotation * Quaternion.Inverse(prevLocalRot);
+        //float angle;
+        //Vector3 axis;
+        //delta.ToAngleAxis(out angle, out axis);
+        //delta = Quaternion.AngleAxis(angle * length, axis);
+        vertices[8] = delta * bottomRight.localPosition;
+        vertices[9] = delta * topRight.localPosition;
+        vertices[10] = delta * topLeft.localPosition;
+        vertices[11] = delta * bottomLeft.localPosition;
+        Debug.DrawLine(bottomRight.position, transform.TransformPoint(delta * topLeft.localPosition), Color.black);
+
+        meshFilter.mesh.SetVertices(vertices);
+        meshFilter.mesh.RecalculateBounds();
+
+        prevLocalRot = transform.localRotation;
+
     }
 
     void AddTri(int[] tri, int[] tris, int index)
