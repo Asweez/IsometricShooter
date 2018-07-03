@@ -1,8 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
-public class TwinStickController : MonoBehaviour {
+public class TwinStickController : NetworkBehaviour {
 
     Animator animator;
     Rigidbody rigidbody;
@@ -57,7 +58,12 @@ public class TwinStickController : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        
+
+        if (!isLocalPlayer)
+        {
+            return;
+        }
+
         if(Input.GetButtonDown("Pickup Item") && itemToPickup != null){
             if (heldItem != null)
             {
@@ -72,7 +78,7 @@ public class TwinStickController : MonoBehaviour {
             heldItem.transform.localRotation = Quaternion.identity;
             heldItem.transform.localScale = Vector3.one;
             Destroy(itemToPickup);
-
+            itemToPickup = null;
             if(heldItem.GetComponent<Lightsaber>() != null){
                 lightsaberBlockHandler.lightsaber = heldItem.transform;
             }
@@ -109,23 +115,8 @@ public class TwinStickController : MonoBehaviour {
         animator.SetFloat("MotionY", -(h * Mathf.Sin(angle)) + (v * Mathf.Cos(angle)));
     }
 
-    private GameObject itemToPickup = null;
+    public GameObject itemToPickup = null;
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if(other.GetComponent<ItemPickup>() != null){
-            itemToPickup = other.gameObject;
-            other.GetComponent<ItemPickup>().UpdateColor(Color.yellow);
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if(other.GetComponent<ItemPickup>() != null){
-            itemToPickup = null;
-            other.GetComponent<ItemPickup>().ResetColor();
-        }
-    }
 
     void HealthChanged(){
         if(_health <= 0){

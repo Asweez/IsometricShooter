@@ -10,7 +10,8 @@ public class LightsaberBlockHandler : MonoBehaviour {
     {
         if (lightsaber == null) return;
         if (!lightsaber.GetComponent<Lightsaber>().blocking) return;
-        if (other.GetComponent<BlasterBullet>() == null) return;
+        if (other.GetComponent<BlasterBullet>() == null && other.GetComponent<Lightsaber>() == null) return;
+        if (other.GetComponentInParent<TwinStickController>() == GetComponentInParent<TwinStickController>()) return;
         Ray ray = new Ray(other.transform.position, -transform.forward);
         Debug.DrawLine(transform.position, ray.GetPoint(-Vector3.Dot(transform.forward, transform.position) + Vector3.Dot(transform.forward, other.transform.position)));
         lightsaber.LookAt(ray.GetPoint(-Vector3.Dot(transform.forward, transform.position) + Vector3.Dot(transform.forward, other.transform.position)));

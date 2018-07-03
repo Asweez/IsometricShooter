@@ -10,6 +10,8 @@ public class Lightsaber : MonoBehaviour
     public bool blocking = false;
     public float blockingColliderIncreaseMultiplier = 2f;
     public Material lightsaberMat;
+    public GameObject particleSystem;
+    public bool canBlock = false;
 
     private List<Vector3> vertices;
     private List<Vector3> handleVerts;
@@ -21,26 +23,18 @@ public class Lightsaber : MonoBehaviour
     private void Awake()
     {
         vertices = new List<Vector3>();
-        GameObject blade = new GameObject("LightsaberBlade");
-        blade.transform.SetParent(transform);
-        blade.transform.localPosition = Vector3.zero;
-        blade.transform.localScale = Vector3.one;
-        blade.transform.localRotation = Quaternion.identity;
-        blade.AddComponent<MeshFilter>();
-        meshFilter = blade.GetComponent<MeshFilter>();
-        blade.AddComponent<MeshRenderer>();
-        blade.GetComponent<MeshRenderer>().material = lightsaberMat;
-        blade.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        meshFilter.GetComponent<MeshRenderer>().material = lightsaberMat;
         GetComponent<Light>().color = lightsaberMat.GetColor("Color_D009460D").gamma;
         prevLocalRot = transform.localRotation;
         CreateMesh();
-        StartCoroutine(Extend(true));
     }
 
     private void OnEnable()
     {
         defaultLocalPos = transform.localPosition;
         defaultLocalRot = transform.localRotation;
+        StartCoroutine(Extend(true));
+
     }
 
     Vector3 defaultLocalPos;
@@ -56,13 +50,16 @@ public class Lightsaber : MonoBehaviour
     void Update()
     {
         if (GetComponentInParent<TwinStickController>().Health <= 0) return;
-        blocking = Input.GetButton("Fire2");
-        if(Input.GetButtonDown("Fire2")){
-            GetComponent<BoxCollider>().size = new Vector3(GetComponent<BoxCollider>().size.x * blockingColliderIncreaseMultiplier, GetComponent<BoxCollider>().size.y, GetComponent<BoxCollider>().size.z * blockingColliderIncreaseMultiplier);
-        }
-        if (Input.GetButtonUp("Fire2"))
-        {
-            GetComponent<BoxCollider>().size = new Vector3(GetComponent<BoxCollider>().size.x / blockingColliderIncreaseMultiplier, GetComponent<BoxCollider>().size.y, GetComponent<BoxCollider>().size.z / blockingColliderIncreaseMultiplier);
+        if (canBlock) {
+            blocking = Input.GetButton("Fire2");
+            if (Input.GetButtonDown("Fire2"))
+            {
+                GetComponent<BoxCollider>().size = new Vector3(GetComponent<BoxCollider>().size.x * blockingColliderIncreaseMultiplier, GetComponent<BoxCollider>().size.y, GetComponent<BoxCollider>().size.z * blockingColliderIncreaseMultiplier);
+            }
+            if (Input.GetButtonUp("Fire2"))
+            {
+                GetComponent<BoxCollider>().size = new Vector3(GetComponent<BoxCollider>().size.x / blockingColliderIncreaseMultiplier, GetComponent<BoxCollider>().size.y, GetComponent<BoxCollider>().size.z / blockingColliderIncreaseMultiplier);
+            }
         }
         if (blocking)
         {
@@ -88,6 +85,7 @@ public class Lightsaber : MonoBehaviour
                     end = new Vector3(Mathf.Lerp(min.localPosition.x, max.localPosition.x, (Mathf.Cos(angle * Mathf.Deg2Rad) / 2f) + 0.5f), Mathf.Lerp(min.localPosition.y, max.localPosition.y, (Mathf.Sin(angle * Mathf.Deg2Rad) / 2f) + 0.5f), min.localPosition.z);
                 } while (end.Equals(start));
                 angle = (angle + 150) % 360;
+                shouldDoDamage = true;
             }
             if (lerp <= 2)
             {
@@ -111,32 +109,22 @@ public class Lightsaber : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if(shouldDoDamage && !other.isTrigger && other.GetComponentInParent<TwinStickController>() != null && other.GetComponentInParent<TwinStickController>() != GetComponentInParent<TwinStickController>())
+        if(other.GetComponent<Lightsaber>() != null)
         {
-            other.GetComponentInParent<TwinStickController>().TakeDamage(50f, other.GetComponent<Rigidbody>(), dir);
+            Destroy(Instantiate(particleSystem, Vector3.Lerp(other.transform.position, transform.position, 0.5f), Quaternion.identity), 2);
             shouldDoDamage = false;
         }
-    }
-
-    void OnTriggerExit(Collider other)
-    {
-        if (!other.isTrigger && other.GetComponentInParent<TwinStickController>() != null && other.GetComponentInParent<TwinStickController>() != GetComponentInParent<TwinStickController>())
+        if(shouldDoDamage && !other.isTrigger && other.GetComponentInParent<TwinStickController>() != null && other.GetComponentInParent<TwinStickController>() != GetComponentInParent<TwinStickController>())
         {
-            shouldDoDamage = true;
+            Debug.Log(other.gameObject.name);
+            other.GetComponentInParent<TwinStickController>().TakeDamage(50f, other.GetComponent<Rigidbody>(), dir);
+            shouldDoDamage = false;
         }
     }
 
     private void LateUpdate()
     {
         CreateMesh();
-    }
-
-    private void OnDestroy()
-    {
-        if (meshFilter != null)
-        {
-            Destroy(meshFilter.gameObject);
-        }
     }
 
     public IEnumerator Extend(bool extend)

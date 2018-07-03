@@ -52,4 +52,25 @@ public class ItemPickup : MonoBehaviour {
     {
         UpdateColor(defaultColor);
     }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if(other.GetComponent<TwinStickController>() != null)
+        {
+            other.GetComponent<TwinStickController>().itemToPickup = gameObject;
+            UpdateColor(Color.yellow);
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.GetComponent<TwinStickController>() != null)
+        {
+            if (other.GetComponent<TwinStickController>().itemToPickup == this)
+            {
+                other.GetComponent<TwinStickController>().itemToPickup = null;
+            }
+            ResetColor();
+        }
+    }
 }
