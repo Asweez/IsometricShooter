@@ -25,6 +25,8 @@ GameObject:
   - component: {fileID: 114469190787823824}
   - component: {fileID: 54303605976939416}
   - component: {fileID: 108146469945901564}
+  - component: {fileID: 114478647792017262}
+  - component: {fileID: 114595517704742568}
   m_Layer: 0
   m_Name: BlasterBullet
   m_TagString: Untagged
@@ -149,7 +151,61 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35ad4bdc2cfa74ef4b40f58cc855dd5a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  blasterRifle: {fileID: 0}
+  particleSystem: {fileID: 1121025654765134, guid: f9f297b19785448cea1642eb93bc4768,
+    type: 2}
+--- !u!114 &114478647792017262
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1498560022033412}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 372142912, guid: dc443db3e92b4983b9738c1131f555cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SceneId:
+    m_Value: 0
+  m_AssetId:
+    i0: 190
+    i1: 37
+    i2: 27
+    i3: 139
+    i4: 0
+    i5: 220
+    i6: 100
+    i7: 106
+    i8: 216
+    i9: 141
+    i10: 192
+    i11: 25
+    i12: 62
+    i13: 232
+    i14: 0
+    i15: 146
+  m_ServerOnly: 0
+  m_LocalPlayerAuthority: 0
+--- !u!114 &114595517704742568
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1498560022033412}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1768714887, guid: dc443db3e92b4983b9738c1131f555cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_TransformSyncMode: 3
+  m_SendInterval: 0
+  m_SyncRotationAxis: 7
+  m_RotationSyncCompression: 0
+  m_SyncSpin: 0
+  m_MovementTheshold: 0.001
+  m_VelocityThreshold: 0.0001
+  m_SnapThreshold: 5
+  m_InterpolateRotation: 1
+  m_InterpolateMovement: 1
 --- !u!136 &136704632845550836
 CapsuleCollider:
   m_ObjectHideFlags: 1

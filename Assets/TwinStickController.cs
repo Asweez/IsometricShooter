@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class TwinStickController : NetworkBehaviour {
+public class TwinStickController : NetworkBehaviour{
 
     Animator animator;
     Rigidbody rigidbody;
@@ -11,30 +11,25 @@ public class TwinStickController : NetworkBehaviour {
     public float walkSpeed, runSpeed;
     public LayerMask floorMask, itemPickupMask;
     public GameObject heldItem;
-    public float Health{
-        get{
-            return _health;
-        }set{
-            _health = value;
-            HealthChanged();
-        }
-    }
-    private float _health;
+    public GameObject cameraPrefab;
+    public GameObject bulletPrefab;
+    [SyncVar]
+    public float health;
     public Transform heldItemPos;
     public LightsaberBlockHandler lightsaberBlockHandler;
     private List<Rigidbody> ragdollRBs;
-    private bool isRagdoll = false;
+    [SyncVar(hook ="Ragdoll")]
+    public bool isRagdoll = false;
 
 	// Use this for initialization
 	void Awake () {
-        _health = 100f;
+        health = 100f;
         animator = GetComponent<Animator>();
         rigidbody = GetComponent<Rigidbody>();
         lightsaberBlockHandler = GetComponentInChildren<LightsaberBlockHandler>();
         ragdollRBs = new List<Rigidbody>(GetComponentsInChildren<Rigidbody>());
         ragdollRBs.Remove(rigidbody);
         hips = animator.GetBoneTransform(HumanBodyBones.Hips);
-        Ragdoll(false);
 	}
 
     void Ragdoll(bool ragdoll)
@@ -55,6 +50,7 @@ public class TwinStickController : NetworkBehaviour {
     }
 
     Transform hips;
+
 	
 	// Update is called once per frame
 	void Update () {
@@ -85,8 +81,23 @@ public class TwinStickController : NetworkBehaviour {
         }
 	}
 
+    [Command]
+    public void CmdFireBullet(Vector3 muzzlePos, Vector3 velocity)
+    {
+        GameObject newBullet = Instantiate(bulletPrefab, muzzlePos, Quaternion.identity);
+        newBullet.GetComponent<Rigidbody>().velocity = velocity;
+        newBullet.transform.LookAt(newBullet.transform.position + velocity);
+        NetworkServer.Spawn(newBullet);
+        Destroy(newBullet, 10f);
+    }
+
     private void FixedUpdate()
     {
+        if (!isLocalPlayer)
+        {
+            return;
+        }
+
         if (isRagdoll)
         {
             transform.position = hips.position;
@@ -117,18 +128,6 @@ public class TwinStickController : NetworkBehaviour {
 
     public GameObject itemToPickup = null;
 
-
-    void HealthChanged(){
-        if(_health <= 0){
-            Ragdoll(true);
-            if(heldItem.GetComponent<Lightsaber>() != null)
-            {
-                StartCoroutine(heldItem.GetComponent<Lightsaber>().Extend(false));
-            }
-            StartCoroutine(Die());
-        }
-    }
-
     IEnumerator Die()
     {
         yield return new WaitForSeconds(5f);
@@ -137,15 +136,40 @@ public class TwinStickController : NetworkBehaviour {
             GetComponent<SkinnedMeshRenderer>().material.SetFloat("Vector1_5F9D24A2", f);
             yield return new WaitForSeconds(0.01f);
         }
-        Destroy(gameObject);
+        RpcRespawn();
     }
+
+    [ClientRpc]
+    public void RpcRespawn()
+    {
+        Invoke("Respawn", 5f);
+    }
+
+    void Respawn()
+    {
+        if (isLocalPlayer)
+        {
+            GetComponent<SkinnedMeshRenderer>().material.SetFloat("Vector1_5F9D24A2", 0f);
+            transform.position = Vector3.zero;
+        }
+        isRagdoll = false;
+    }
+
 
     public float deathForce = 100f;
 
+    [Server]
     public void TakeDamage(float damage, Rigidbody bone, Vector3 dir)
     {
-        Health -= damage;
+        //Running on the server
+        health -= damage;
         bone.AddForce(dir * deathForce, ForceMode.Impulse);
+        if (health <= 0)
+        {
+            health = 100f;
+            isRagdoll = true;
+            RpcRespawn();
+        }
     }
 
     private void OnAnimatorIK(int layerIndex)
@@ -192,5 +216,11 @@ public class TwinStickController : NetworkBehaviour {
             // Set the player's rotation to this new rotation.
             rigidbody.MoveRotation(newRotation);
         }
+    }
+
+    public override void OnStartLocalPlayer()
+    {
+        GetComponent<SkinnedMeshRenderer>().material.SetColor("Color_16A84C3B", Color.green);
+        Instantiate(cameraPrefab, transform.position, Quaternion.Euler(new Vector3(30, 45, 0))).GetComponent<CameraFollow>().target = transform ;
     }
 }

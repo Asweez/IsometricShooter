@@ -49,7 +49,7 @@ public class Lightsaber : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (GetComponentInParent<TwinStickController>().Health <= 0) return;
+        if (GetComponentInParent<TwinStickController>().health <= 0) return;
         if (canBlock) {
             blocking = Input.GetButton("Fire2");
             if (Input.GetButtonDown("Fire2"))
@@ -114,10 +114,10 @@ public class Lightsaber : MonoBehaviour
             Destroy(Instantiate(particleSystem, Vector3.Lerp(other.transform.position, transform.position, 0.5f), Quaternion.identity), 2);
             shouldDoDamage = false;
         }
-        if(shouldDoDamage && !other.isTrigger && other.GetComponentInParent<TwinStickController>() != null && other.GetComponentInParent<TwinStickController>() != GetComponentInParent<TwinStickController>())
+        if(shouldDoDamage && !other.isTrigger && other.GetComponent<TwinStickController>() != null && other.GetComponent<TwinStickController>() != GetComponentInParent<TwinStickController>())
         {
             Debug.Log(other.gameObject.name);
-            other.GetComponentInParent<TwinStickController>().TakeDamage(50f, other.GetComponent<Rigidbody>(), dir);
+            other.GetComponent<TwinStickController>().TakeDamage(20f, other.GetComponent<Rigidbody>(), dir);
             shouldDoDamage = false;
         }
     }

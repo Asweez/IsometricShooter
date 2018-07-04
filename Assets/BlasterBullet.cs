@@ -1,11 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
-public class BlasterBullet : MonoBehaviour {
+public class BlasterBullet : NetworkBehaviour {
 
-    public BlasterRifle blasterRifle;
 
+    public GameObject particleSystem;
+
+    [ServerCallback]
     private void OnTriggerEnter(Collider other)
     {
         
@@ -20,12 +23,20 @@ public class BlasterBullet : MonoBehaviour {
             
             if (!other.isTrigger)
             {
-                if (blasterRifle != null)
+                if (other.GetComponent<TwinStickController>() != null)
                 {
-                    blasterRifle.BulletHit(transform.position - transform.forward, other.GetComponentInParent<TwinStickController>(), other, transform.forward);
+                    other.GetComponent<TwinStickController>().TakeDamage(15f, other.GetComponent<Rigidbody>(), transform.forward);
                 }
                 Destroy(gameObject);
+                SpawnParticles();
             }
         }
+    }
+
+    public void SpawnParticles()
+    {
+        GameObject hitPS = Instantiate(particleSystem, transform.position, Quaternion.identity);
+        NetworkServer.Spawn(hitPS);
+        Destroy(hitPS, 3f);
     }
 }
